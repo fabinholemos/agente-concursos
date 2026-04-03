@@ -1,0 +1,6 @@
+pypdf 
+streamlit 
+agno 
+pytesseract 
+pdf2image 
+pillow 
