@@ -139,15 +139,10 @@ with st.sidebar:
         st.session_state.nome_arquivo = ""
         st.rerun()
 
-# ─── HISTORICO DE MENSAGENS ───────────────────────────────────────────────────
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# ─── UPLOAD DE ARQUIVO ────────────────────────────────────────────────────────
-col1, col2 = st.columns([5, 1])
-
-with col2:
+# ─── UPLOAD DE ARQUIVO (sidebar) ─────────────────────────────────────────────
+with st.sidebar:
+    st.divider()
+    st.markdown("**📎 Anexar arquivo**")
     arquivo = st.file_uploader(
         "Anexar arquivo",
         type=["pdf", "png", "jpg", "jpeg"],
@@ -156,26 +151,24 @@ with col2:
     )
     if arquivo is not None and arquivo.name != st.session_state.nome_arquivo:
         if arquivo.type == "application/pdf":
-            with st.spinner("Lendo PDF... (pode demorar um pouco em PDFs escaneados)"):
+            with st.spinner("Lendo PDF..."):
                 try:
                     arquivo_bytes = arquivo.read()
                     texto, metodo = extrair_texto_pdf(arquivo_bytes, arquivo.name)
-
                     if texto:
                         st.session_state.contexto_arquivo = texto
                         st.session_state.nome_arquivo = arquivo.name
                         if metodo == "ocr":
-                            st.success(f"✅ PDF escaneado lido via OCR! ({len(texto)} caracteres)")
+                            st.success(f"✅ PDF via OCR! ({len(texto)} chars)")
                         else:
-                            st.success(f"✅ PDF carregado! ({len(texto)} caracteres)")
+                            st.success(f"✅ PDF carregado! ({len(texto)} chars)")
                     elif "erro" in metodo:
-                        st.error(f"❌ Erro ao processar PDF: {metodo}")
+                        st.error(f"❌ Erro: {metodo}")
                     else:
-                        st.error("❌ Não foi possível extrair texto deste PDF.")
+                        st.error("❌ Não foi possível extrair texto.")
                 except Exception as e:
                     st.error(f"Erro ao ler PDF: {e}")
         else:
-            # Imagem: usa OCR direto
             with st.spinner("Lendo imagem via OCR..."):
                 try:
                     imagem = Image.open(arquivo)
@@ -183,43 +176,51 @@ with col2:
                     if texto_ocr.strip():
                         st.session_state.contexto_arquivo = texto_ocr[:12000]
                         st.session_state.nome_arquivo = arquivo.name
-                        st.success(f"✅ Imagem lida via OCR! ({len(texto_ocr[:12000])} caracteres)")
+                        st.success(f"✅ Imagem via OCR!")
                     else:
-                        st.session_state.contexto_arquivo = f"[IMAGEM: {arquivo.name} - sem texto detectado]"
+                        st.session_state.contexto_arquivo = f"[IMAGEM: {arquivo.name}]"
                         st.session_state.nome_arquivo = arquivo.name
-                        st.warning("⚠️ Nenhum texto detectado na imagem.")
+                        st.warning("⚠️ Nenhum texto detectado.")
                 except Exception as e:
-                    st.error(f"Erro ao ler imagem: {e}")
+                    st.error(f"Erro: {e}")
 
-# ─── INPUT DO USUARIO ─────────────────────────────────────────────────────────
-with col1:
-    prompt = st.chat_input("Digite sua pergunta aqui...")
+# ─── AREA DO CHAT ─────────────────────────────────────────────────────────────
+chat_container = st.container()
+
+with chat_container:
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+# ─── INPUT FIXO NO RODAPE ─────────────────────────────────────────────────────
+prompt = st.chat_input("Digite sua pergunta aqui...")
 
 # ─── LOGICA DE RESPOSTA ───────────────────────────────────────────────────────
 if prompt:
-    # Monta a mensagem exibida no chat (sem o bloco do arquivo para nao poluir)
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Pensando..."):
+    with chat_container:
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-            # Monta o historico para dar contexto ao agente
-            historico = ""
-            if len(st.session_state.messages) > 1:
-                msgs_anteriores = st.session_state.messages[:-1]  # Exclui a mensagem atual
-                historico_linhas = []
-                for m in msgs_anteriores[-10:]:  # Ultimas 10 mensagens para nao estourar contexto
-                    papel = "Usuário" if m["role"] == "user" else "Assistente"
-                    historico_linhas.append(f"{papel}: {m['content']}")
-                if historico_linhas:
-                    historico = "HISTÓRICO DA CONVERSA:\n" + "\n".join(historico_linhas) + "\n\n"
+        with st.chat_message("assistant"):
+            with st.spinner("Pensando..."):
 
-            # Monta o conteudo do arquivo com tags claras
-            bloco_arquivo = ""
-            if st.session_state.contexto_arquivo:
-                bloco_arquivo = f"""
+                # Monta o historico
+                historico = ""
+                if len(st.session_state.messages) > 1:
+                    msgs_anteriores = st.session_state.messages[:-1]
+                    historico_linhas = []
+                    for m in msgs_anteriores[-10:]:
+                        papel = "Usuário" if m["role"] == "user" else "Assistente"
+                        historico_linhas.append(f"{papel}: {m['content']}")
+                    if historico_linhas:
+                        historico = "HISTÓRICO DA CONVERSA:\n" + "\n".join(historico_linhas) + "\n\n"
+
+                # Monta o conteudo do arquivo
+                bloco_arquivo = ""
+                if st.session_state.contexto_arquivo:
+                    bloco_arquivo = f"""
 <CONTEUDO_DO_ARQUIVO nome="{st.session_state.nome_arquivo}">
 {st.session_state.contexto_arquivo}
 </CONTEUDO_DO_ARQUIVO>
@@ -228,15 +229,15 @@ INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para r
 
 """
 
-            # Pergunta final enviada ao agente
-            pergunta_completa = f"{historico}{bloco_arquivo}Pergunta do usuário: {prompt}"
+                pergunta_completa = f"{historico}{bloco_arquivo}Pergunta do usuário: {prompt}"
 
-            try:
-                response = st.session_state.agent.run(pergunta_completa)
-                resposta = response.content
-            except Exception as e:
-                resposta = f"❌ Erro ao processar: {e}"
+                try:
+                    response = st.session_state.agent.run(pergunta_completa)
+                    resposta = response.content
+                except Exception as e:
+                    resposta = f"❌ Erro ao processar: {e}"
 
-            st.markdown(resposta)
+                st.markdown(resposta)
 
     st.session_state.messages.append({"role": "assistant", "content": resposta})
+    st.rerun()
