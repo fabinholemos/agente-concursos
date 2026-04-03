@@ -4,3 +4,4 @@ agno
 pytesseract 
 pdf2image 
 pillow 
+groq 
