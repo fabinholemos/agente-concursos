@@ -28,8 +28,8 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 # Modelos em ordem de preferência (fallback automático)
 MODELOS_GROQ = [
     "llama-3.3-70b-versatile",
+    "qwen-qwq-32b",
     "llama-3.1-8b-instant",
-    "mistral-saba-24b",
 ]
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
