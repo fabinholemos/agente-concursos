@@ -273,6 +273,10 @@ INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para r
 
             pergunta_completa = f"{historico}{bloco_arquivo}Pergunta do usuário: {prompt}"
 
+            def is_rate_limit(text):
+                keywords = ["rate_limit", "rate limit", "429", "tokens per day", "tpd", "try again", "rate limit reached", "resource_exhausted"]
+                return any(k in text.lower() for k in keywords)
+
             try:
                 resposta = None
                 for i in range(len(MODELOS_GROQ)):
@@ -281,16 +285,22 @@ INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para r
                         if i > 0:
                             st.session_state.modelo_atual = idx
                             st.session_state.agent = criar_agente(idx)
-                            st.toast(f"⚠️ Limite atingido, trocando para {MODELOS_GROQ[idx]}...")
+                            st.toast(f"⚠️ Trocando para {MODELOS_GROQ[idx]}...")
                         response = st.session_state.agent.run(pergunta_completa)
-                        resposta = response.content
+                        conteudo = response.content
+
+                        # Verifica se o conteudo em si é um erro de rate limit
+                        if conteudo and is_rate_limit(conteudo):
+                            continue
+
+                        resposta = conteudo
                         break
                     except Exception as e:
-                        erro_str = str(e).lower()
-                        if any(x in erro_str for x in ["rate_limit", "rate limit", "429", "quota", "tokens per day", "tpd", "try again"]):
+                        if is_rate_limit(str(e)):
                             continue
                         raise e
-                if resposta is None:
+
+                if not resposta:
                     resposta = "❌ Todos os modelos atingiram o limite. Tente novamente em algumas horas."
             except Exception as e:
                 resposta = f"❌ Erro ao processar: {e}"
