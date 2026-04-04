@@ -107,11 +107,13 @@ def criar_agente(modelo_idx=0):
         **Explicação:** [Explicação detalhada]
         4. APOSTILAS: Monte apostilas completas com teoria, exemplos práticos e questões
 
-        REGRA IMPORTANTE SOBRE ARQUIVOS:
-        - Quando o usuário enviar um arquivo PDF ou documento, o conteúdo será incluído na mensagem entre as tags <CONTEUDO_DO_ARQUIVO> e </CONTEUDO_DO_ARQUIVO>
-        - Você DEVE ler, analisar e usar esse conteúdo para responder à pergunta do usuário
-        - Nunca diga que não pode ler o arquivo — o conteúdo já estará na mensagem
-        - Baseie sua resposta SEMPRE no conteúdo fornecido quando ele estiver presente
+        REGRA CRÍTICA SOBRE ARQUIVOS — NUNCA IGNORE:
+        - O conteúdo do arquivo JÁ ESTÁ incluído na mensagem entre as tags <CONTEUDO_DO_ARQUIVO> e </CONTEUDO_DO_ARQUIVO>
+        - Você NÃO precisa acessar nenhum sistema externo para ler o arquivo
+        - O texto já foi extraído e está disponível para você AGORA na mensagem
+        - NUNCA diga que não pode ler arquivos — o conteúdo já está aqui
+        - SEMPRE use o conteúdo entre as tags para responder
+        - Se as tags estiverem presentes, LEIA o conteúdo e responda baseado nele
 
         Sempre responda em português, de forma clara e didática.
         """,
@@ -263,11 +265,13 @@ if prompt:
             bloco_arquivo = ""
             if st.session_state.contexto_arquivo:
                 bloco_arquivo = f"""
+ATENÇÃO: O usuário enviou um arquivo. O conteúdo completo já foi extraído e está abaixo. USE ESSE CONTEÚDO para responder.
+
 <CONTEUDO_DO_ARQUIVO nome="{st.session_state.nome_arquivo}">
 {st.session_state.contexto_arquivo}
 </CONTEUDO_DO_ARQUIVO>
 
-INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para responder a pergunta abaixo.
+INSTRUÇÃO OBRIGATÓRIA: Você tem acesso ao conteúdo acima. Responda a pergunta do usuário usando esse conteúdo. Não diga que não pode ler arquivos.
 
 """
 
