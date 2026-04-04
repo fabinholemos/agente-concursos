@@ -10,19 +10,19 @@ from PIL import Image
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # ─── API KEY ──────────────────────────────────────────────────────────────────
-GROQ_API_KEY = (
-    os.environ.get("GROQ_API_KEY")
-    or st.secrets.get("GROQ_API_KEY", "")
-    if hasattr(st, "secrets") else os.environ.get("GROQ_API_KEY", "")
+GOOGLE_API_KEY = (
+    os.environ.get("GOOGLE_API_KEY")
+    or st.secrets.get("GOOGLE_API_KEY", "")
+    if hasattr(st, "secrets") else os.environ.get("GOOGLE_API_KEY", "")
 )
-if not GROQ_API_KEY:
-    st.error("⚠️ GROQ_API_KEY não encontrada.")
+if not GOOGLE_API_KEY:
+    st.error("⚠️ GOOGLE_API_KEY não encontrada.")
     st.stop()
 
-os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 from agno.agent import Agent
-from agno.models.groq import Groq
+from agno.models.google import Gemini
 from agno.tools.duckduckgo import DuckDuckGoTools
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ if "nome_arquivo" not in st.session_state:
 
 if "agent" not in st.session_state:
     st.session_state.agent = Agent(
-        model=Groq(id="llama-3.3-70b-versatile"),
+        model=Gemini(id="gemini-2.0-flash"),
         description="""
         Você é o melhor especialista em informática para concursos públicos do Brasil.
         Seu público são candidatos iniciantes e intermediários de concursos federais, estaduais e municipais.
