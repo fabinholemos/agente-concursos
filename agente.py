@@ -28,7 +28,7 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 # Modelos em ordem de preferência (fallback automático)
 MODELOS_GROQ = [
     "llama-3.3-70b-versatile",
-    "qwen-qwq-32b",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
     "llama-3.1-8b-instant",
 ]
 
