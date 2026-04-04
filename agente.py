@@ -71,6 +71,8 @@ if "modelo_atual" not in st.session_state:
     st.session_state.modelo_atual = 0
 
 def criar_agente(modelo_idx=0):
+    # Modelos menores (fallback) nao suportam tools bem, desabilita
+    usar_tools = modelo_idx == 0
     return Agent(
         model=Groq(id=MODELOS_GROQ[modelo_idx]),
         description="""
@@ -117,7 +119,7 @@ def criar_agente(modelo_idx=0):
 
         Sempre responda em português, de forma clara e didática.
         """,
-        tools=[DuckDuckGoTools()],
+        tools=[DuckDuckGoTools()] if usar_tools else [],
         markdown=True,
         num_history_messages=0,
     )
