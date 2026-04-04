@@ -286,7 +286,8 @@ INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para r
                         resposta = response.content
                         break
                     except Exception as e:
-                        if "rate_limit" in str(e).lower() or "429" in str(e) or "quota" in str(e).lower():
+                        erro_str = str(e).lower()
+                        if any(x in erro_str for x in ["rate_limit", "rate limit", "429", "quota", "tokens per day", "tpd", "try again"]):
                             continue
                         raise e
                 if resposta is None:
