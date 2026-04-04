@@ -10,20 +10,27 @@ from PIL import Image
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # ─── API KEY ──────────────────────────────────────────────────────────────────
-GOOGLE_API_KEY = (
-    os.environ.get("GOOGLE_API_KEY")
-    or st.secrets.get("GOOGLE_API_KEY", "")
-    if hasattr(st, "secrets") else os.environ.get("GOOGLE_API_KEY", "")
+GROQ_API_KEY = (
+    os.environ.get("GROQ_API_KEY")
+    or st.secrets.get("GROQ_API_KEY", "")
+    if hasattr(st, "secrets") else os.environ.get("GROQ_API_KEY", "")
 )
-if not GOOGLE_API_KEY:
-    st.error("⚠️ GOOGLE_API_KEY não encontrada.")
+if not GROQ_API_KEY:
+    st.error("⚠️ GROQ_API_KEY não encontrada.")
     st.stop()
 
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
 from agno.agent import Agent
-from agno.models.google import Gemini
+from agno.models.groq import Groq
 from agno.tools.duckduckgo import DuckDuckGoTools
+
+# Modelos em ordem de preferência (fallback automático)
+MODELOS_GROQ = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+]
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -60,9 +67,12 @@ if "contexto_arquivo" not in st.session_state:
 if "nome_arquivo" not in st.session_state:
     st.session_state.nome_arquivo = ""
 
-if "agent" not in st.session_state:
-    st.session_state.agent = Agent(
-        model=Gemini(id="gemini-2.0-flash"),
+if "modelo_atual" not in st.session_state:
+    st.session_state.modelo_atual = 0
+
+def criar_agente(modelo_idx=0):
+    return Agent(
+        model=Groq(id=MODELOS_GROQ[modelo_idx]),
         description="""
         Você é o melhor especialista em informática para concursos públicos do Brasil.
         Seu público são candidatos iniciantes e intermediários de concursos federais, estaduais e municipais.
@@ -110,6 +120,9 @@ if "agent" not in st.session_state:
         num_history_messages=0,
     )
 
+if "agent" not in st.session_state:
+    st.session_state.agent = criar_agente(st.session_state.modelo_atual)
+
 # ─── FUNCAO OCR ───────────────────────────────────────────────────────────────
 def extrair_texto_pdf(arquivo_bytes, nome_arquivo):
     try:
@@ -156,6 +169,9 @@ with st.sidebar:
     """)
 
     st.divider()
+
+    st.divider()
+    st.caption(f"🤖 Modelo: `{MODELOS_GROQ[st.session_state.modelo_atual]}`")
 
     if st.session_state.nome_arquivo:
         st.success(f"📎 **{st.session_state.nome_arquivo}**")
@@ -258,8 +274,23 @@ INSTRUÇÃO: O arquivo acima foi enviado pelo usuário. Use seu conteúdo para r
             pergunta_completa = f"{historico}{bloco_arquivo}Pergunta do usuário: {prompt}"
 
             try:
-                response = st.session_state.agent.run(pergunta_completa)
-                resposta = response.content
+                resposta = None
+                for i in range(len(MODELOS_GROQ)):
+                    idx = (st.session_state.modelo_atual + i) % len(MODELOS_GROQ)
+                    try:
+                        if i > 0:
+                            st.session_state.modelo_atual = idx
+                            st.session_state.agent = criar_agente(idx)
+                            st.toast(f"⚠️ Limite atingido, trocando para {MODELOS_GROQ[idx]}...")
+                        response = st.session_state.agent.run(pergunta_completa)
+                        resposta = response.content
+                        break
+                    except Exception as e:
+                        if "rate_limit" in str(e).lower() or "429" in str(e) or "quota" in str(e).lower():
+                            continue
+                        raise e
+                if resposta is None:
+                    resposta = "❌ Todos os modelos atingiram o limite. Tente novamente em algumas horas."
             except Exception as e:
                 resposta = f"❌ Erro ao processar: {e}"
 
