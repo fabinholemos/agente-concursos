@@ -29,7 +29,7 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 MODELOS_GROQ = [
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
-    "gemma2-9b-it",
+    "mistral-saba-24b",
 ]
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
